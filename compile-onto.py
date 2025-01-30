@@ -3,13 +3,14 @@ from shutil import copytree, rmtree, move
 from natsort import natsorted
 import subprocess
 from pathlib import Path
+from glob import glob
 
 rmtree("./copy", ignore_errors=True)
 copytree("/github/workspace", "./copy")
 
 repo = Repo.init("./copy")
 tags = natsorted(repo.tags, key= lambda t: t.name)
-raise Exception(Path("./copy").absolute().as_posix() + str(tags))
+raise Exception(list(glob("*")))
 
 for tag in tags:
     repo.git.checkout(tag)
