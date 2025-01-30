@@ -6,7 +6,7 @@ from pathlib import Path
 
 rmtree("./copy", ignore_errors=True)
 copytree(".", "./copy")
-raise Exception(str(Path.cwd))
+raise Exception(str(Path.cwd.absolute().as_posix()))
 
 repo = Repo.init("./copy")
 tags = natsorted(repo.tags, key= lambda t: t.name)
