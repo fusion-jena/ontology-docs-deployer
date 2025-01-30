@@ -10,7 +10,6 @@ copytree("/github/workspace", "./copy")
 
 repo = Repo.init("./copy")
 tags = natsorted(repo.tags, key= lambda t: t.name)
-raise Exception(list(tags))
 
 for tag in tags:
     repo.git.checkout(tag)
