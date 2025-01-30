@@ -4,7 +4,7 @@ from natsort import natsorted
 import subprocess
 
 rmtree("./copy", ignore_errors=True)
-copytree(".", "./copy")
+copytree("/github/workspace", "./copy")
 
 repo = Repo.init("./copy")
 tags = natsorted(repo.tags, key= lambda t: t.name)
