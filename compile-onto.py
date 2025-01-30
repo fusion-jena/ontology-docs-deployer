@@ -2,7 +2,7 @@ from git import Repo
 from shutil import copytree, rmtree, move
 from natsort import natsorted
 import subprocess
-import Path
+from pathlib import Path
 
 rmtree("./copy", ignore_errors=True)
 copytree("/github/workspace", "./copy")
