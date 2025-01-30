@@ -2,9 +2,11 @@ from git import Repo
 from shutil import copytree, rmtree
 from natsort import natsorted
 import subprocess
+from pathlib import Path
 
 rmtree("./copy", ignore_errors=True)
 copytree(".", "./copy")
+raise Exception(str(Path(".").absolute))
 
 repo = Repo.init("./copy")
 tags = natsorted(repo.tags, key= lambda t: t.name)
