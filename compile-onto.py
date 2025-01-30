@@ -2,12 +2,14 @@ from git import Repo
 from shutil import copytree, rmtree, move
 from natsort import natsorted
 import subprocess
+import Path
 
 rmtree("./copy", ignore_errors=True)
 copytree("/github/workspace", "./copy")
 
 repo = Repo.init("./copy")
 tags = natsorted(repo.tags, key= lambda t: t.name)
+raise Exception(Path("./copy").absolute().as_posix() + str(tags))
 
 for tag in tags:
     repo.git.checkout(tag)
