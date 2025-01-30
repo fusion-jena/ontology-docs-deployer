@@ -11,6 +11,6 @@ USER widoco
 
 
 
-ENTRYPOINT "python3" "compile-onto.py"
+ENTRYPOINT "python3" "/usr/local/widoco/compile-onto.py"
 CMD ""
 
