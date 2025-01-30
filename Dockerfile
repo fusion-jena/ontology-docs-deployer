@@ -7,7 +7,6 @@ COPY requirements.txt .
 COPY compile-onto.py .
 RUN apt install -y python3 python3-pip git
 RUN pip install -r requirements.txt
-USER widoco
 
 
 
