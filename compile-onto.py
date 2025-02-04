@@ -7,8 +7,8 @@ from glob import glob
 from os.path import basename
 from os import chdir
 
-def create_docs(onto_name : str):
-    subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile copy/ontology/{onto_name}.ttl -import copy/ontology/{onto_name}.ttl -outFolder out/ -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -htaccess", shell=True)
+def create_docs(onto_name : str, out_path : str):
+    subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile copy/ontology/{onto_name}.ttl -import copy/ontology/{onto_name}.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -htaccess", shell=True)
     diagram_path = f"copy/ontology/{onto_name}_diagram.svg"
     if Path(diagram_path).is_file():
         copyfile(diagram_path, f"out/{onto_name}_diagram.svg")
@@ -29,6 +29,7 @@ tags = natsorted([t for t in repo.tags if t.name.startswith('v')], key= lambda t
 
 for tag in tags:
     repo.git.checkout(tag)
-    create_docs(onto_name)
+    out_path = f"out/{tag.name[1:]}"
+    create_docs(onto_name, out_path)
     if tag == tags[-1]:
-        copytree(f"out/{tag.name[1:]}", "out/", dirs_exist_ok=True)
+        copytree(out_path, "out/", dirs_exist_ok=True)
