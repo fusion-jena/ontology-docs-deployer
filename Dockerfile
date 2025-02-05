@@ -5,6 +5,7 @@ USER root
 RUN apt-get update
 RUN apt install -y python3 python3-pip git
 RUN git config --global core.autocrlf input
+COPY default_index.html .
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY compile-onto.py .
