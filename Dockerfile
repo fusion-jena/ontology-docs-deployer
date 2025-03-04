@@ -1,4 +1,4 @@
-FROM ghcr.io/dgarijo/widoco:v1.4.25
+FROM ghcr.io/dgarijo/widoco:master 
 
 
 USER root
