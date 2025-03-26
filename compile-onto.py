@@ -12,7 +12,7 @@ def create_docs(onto_name : str, out_path : str):
     diagram_path = f"{onto_name}_diagram.svg"
     copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
     if Path(diagram_path).is_file():
-        copyfile(diagram_path, f"out/{onto_name}_diagram.svg")
+        copyfile(diagram_path, f"{onto_name}_diagram.svg")
 
 root = "/github/workspace"
 chdir(root)
