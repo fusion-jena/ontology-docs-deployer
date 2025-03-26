@@ -30,7 +30,7 @@ for tag in tags:
     repo.git.checkout(tag)
     out_path = f"out/{tag.name[1:]}"
     
-    onto_files = [basename(f) for f in glob(root + '/ontology/*.ttl')]
+    onto_files = [basename(f) for f in glob(root + 'copy/ontology/*.ttl')]
     onto_files.sort(key=len)
     onto_name = onto_files[0][:-4]
     
