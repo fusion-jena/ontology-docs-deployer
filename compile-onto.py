@@ -7,12 +7,12 @@ from glob import glob
 from os.path import basename
 from os import chdir
 
-def create_docs(onto_name : str, out_path : str):
-    subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile copy/ontology/{onto_name}.ttl -import copy/ontology/{onto_name}.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
-    diagram_path = f"{onto_name}_diagram.svg"
+def create_docs(onto_basepath : str, out_path : str):
+    subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile {onto_basepath}.ttl -import {onto_basepath}.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
+    diagram_path = f"{onto_basepath}_diagram.svg"
     copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
     if Path(diagram_path).is_file():
-        copyfile(diagram_path, f"{onto_name}_diagram.svg")
+        copyfile(diagram_path, f"{onto_basepath}_diagram.svg")
 
 root = "/github/workspace"
 chdir(root)
@@ -32,8 +32,8 @@ for tag in tags:
     
     onto_files = [basename(f) for f in glob(root + '/copy/ontology/*.ttl')]
     onto_files.sort(key=len)
-    onto_name = onto_files[0][:-4]
+    onto_basepath = onto_files[0][:-4]
     
-    create_docs(onto_name, out_path)
+    create_docs(onto_basepath, out_path)
     if tag == tags[-1]:
         copytree(out_path, "out/", dirs_exist_ok=True)
