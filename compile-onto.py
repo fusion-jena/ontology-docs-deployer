@@ -17,9 +17,7 @@ def create_docs(onto_name : str, out_path : str):
 root = "/github/workspace"
 chdir(root)
 
-onto_files = [basename(f) for f in glob(root + '/ontology/*.ttl')]
-onto_files.sort(key=len)
-onto_name = onto_files[0][:-4]
+
 
 
 rmtree("./copy", ignore_errors=True)
@@ -31,6 +29,11 @@ tags = natsorted([t for t in repo.tags if t.name.startswith('v')], key= lambda t
 for tag in tags:
     repo.git.checkout(tag)
     out_path = f"out/{tag.name[1:]}"
+    
+    onto_files = [basename(f) for f in glob(root + '/ontology/*.ttl')]
+    onto_files.sort(key=len)
+    onto_name = onto_files[0][:-4]
+    
     create_docs(onto_name, out_path)
     if tag == tags[-1]:
         copytree(out_path, "out/", dirs_exist_ok=True)
