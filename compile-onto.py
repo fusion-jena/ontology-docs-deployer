@@ -9,7 +9,7 @@ from os import chdir
 
 def create_docs(onto_name : str, out_path : str):
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile copy/ontology/{onto_name}.ttl -import copy/ontology/{onto_name}.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
-    diagram_path = f"copy/ontology/{onto_name}_diagram.svg"
+    diagram_path = f"{onto_name}_diagram.svg"
     copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
     if Path(diagram_path).is_file():
         copyfile(diagram_path, f"out/{onto_name}_diagram.svg")
