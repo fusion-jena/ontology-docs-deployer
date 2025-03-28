@@ -55,9 +55,9 @@ def create_docs(onto_name : str, out_path : str, repo : Repo, curr_tag : str, la
     g.add((ontology_entity, OWL.versionInfo, Literal(version)))
     g.add((ontology_entity, DCTERMS.description, Literal(f'![Diagram]({onto_name}_diagram.svg)')))
     if prev_version is not None:
-        g.add((ontology_entity, OWL.priorVersion, Literal(f"{namespace}{prev_version}/")))
+        g.add((ontology_entity, OWL.priorVersion, URIRef(f"{namespace[:-1]}/{prev_version}/")))
 
-    g.add((ontology_entity, OWL.versionIRI, Literal(f"{namespace}{version}/")))
+    g.add((ontology_entity, OWL.versionIRI, URIRef(f"{namespace[:-1]}/{version}/")))
     g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version}")))
 
     g.serialize("prepared_ontology.ttl", format="ttl")
