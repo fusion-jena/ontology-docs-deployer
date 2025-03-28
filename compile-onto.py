@@ -9,6 +9,17 @@ from os import chdir, remove
 from rdflib import *
 from rdflib.namespace import OWL, VANN, DCTERMS, SDO
 
+def move_files(source_dir, destination_dir):
+    """
+    Move all files and directories from the source directory to the destination directory.
+
+    Args:
+        source_dir (str): The path to the source directory.
+        destination_dir (str): The path to the destination directory.
+    """
+    for item in os.listdir(source_dir):
+        shutil.move(os.path.join(source_dir, item), destination_dir)
+
 def create_docs(onto_name : str, out_path : str, repo : Repo, curr_tag : str, last_tag : str):
     g = Graph()
     g.parse(f'copy/ontology/{onto_name}.ttl')
@@ -49,7 +60,9 @@ def create_docs(onto_name : str, out_path : str, repo : Repo, curr_tag : str, la
     g.serialize("prepared_ontology.ttl", format="ttl")
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile prepared_ontology.ttl -import prepared_ontology.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
     remove("prepared_ontology.ttl")
-
+    
+    move_files(f'{out}/docs', out)
+    
     diagram_path = f"copy/ontology/{onto_name}_diagram.svg"
     copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
     if Path(diagram_path).is_file():
