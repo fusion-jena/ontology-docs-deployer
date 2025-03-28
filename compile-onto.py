@@ -5,9 +5,12 @@ import subprocess
 from pathlib import Path
 from glob import glob
 from os.path import basename
-from os import chdir, remove
+from os import chdir, remove, listdir
 from rdflib import *
 from rdflib.namespace import OWL, VANN, DCTERMS, SDO
+import os
+import shutil
+
 
 def move_files(source_dir, destination_dir):
     """
