@@ -61,7 +61,7 @@ def create_docs(onto_name : str, out_path : str, repo : Repo, curr_tag : str, la
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile prepared_ontology.ttl -import prepared_ontology.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
     remove("prepared_ontology.ttl")
     
-    move_files(f'{out}/docs', out)
+    move_files(f'{out_path}/docs', out_path)
     
     diagram_path = f"copy/ontology/{onto_name}_diagram.svg"
     copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
