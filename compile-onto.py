@@ -44,8 +44,7 @@ def create_docs(onto_name : str, out_path : str, repo : Repo, curr_tag : str, la
         g.add((ontology_entity, OWL.priorVersion, Literal(f"{namespace}/{prev_version}/")))
 
     g.add((ontology_entity, OWL.versionIRI, Literal(f"{namespace}/{version}/")))
-    g.add((ontology_entity, SDO.citation, Literal(f"Cite this vocabulary as: {creator}, {title} v{version}", lang="en")))
-    g.add((ontology_entity, SDO.citation, Literal(f"Zitieren sie dieses Vokabular als: {creator}, {title} v{version}", lang="de")))
+    g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version}")))
 
     g.serialize("prepared_ontology.ttl", format="ttl")
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile prepared_ontology.ttl -import prepared_ontology.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
