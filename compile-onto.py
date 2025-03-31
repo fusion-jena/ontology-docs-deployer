@@ -5,12 +5,30 @@ import subprocess
 from pathlib import Path
 from glob import glob
 from os.path import basename
-from os import chdir, remove
+from os import chdir, remove, listdir
 from rdflib import *
 from rdflib.namespace import OWL, VANN, DCTERMS, SDO
+import os
+import shutil
 
-def create_docs(onto_name : str, ontology_path : str, out_path : str):
+
+def move_files(source_dir, destination_dir):
+    """
+    Move all files and directories from the source directory to the destination directory.
+
+    Args:
+        source_dir (str): The path to the source directory.
+        destination_dir (str): The path to the destination directory.
+    """
+    for item in os.listdir(source_dir):
+        shutil.move(os.path.join(source_dir, item), destination_dir)
+
+def create_docs(onto_name : str, ontology_path : str, out_path : str, last_tag):
+    print(f"Running subprocess.run now! with {onto_name}, {ontology_path}, {out_path}, {last_tag}", flush=True)
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile {ontology_path} -import {ontology_path} -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
+
+    if last_tag is not None:
+        move_files(f'{out_path}/doc', out_path)
 
     diagram_path = f"copy/ontology/{onto_name}_diagram.svg"
     copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
@@ -49,14 +67,12 @@ def rewrite_ontology_metadata(prepared_ontology_path, onto_name, repo, curr_tag,
     g.add((ontology_entity, OWL.versionInfo, Literal(version)))
     g.add((ontology_entity, DCTERMS.description, Literal(f'![Diagram]({onto_name}_diagram.svg)')))
     if prev_version is not None:
-        g.add((ontology_entity, OWL.priorVersion, Literal(f"{namespace}/{prev_version}/")))
+        g.add((ontology_entity, OWL.priorVersion, URIRef(f"{namespace[:-1]}/{prev_version}/")))
 
-    g.add((ontology_entity, OWL.versionIRI, Literal(f"{namespace}/{version}/")))
-    g.add((ontology_entity, SDO.citation, Literal(f"Cite this vocabulary as: {creator}, {title} v{version}", lang="en")))
-    g.add((ontology_entity, SDO.citation, Literal(f"Zitieren sie dieses Vokabular als: {creator}, {title} v{version}", lang="de")))
+    g.add((ontology_entity, OWL.versionIRI, URIRef(f"{namespace[:-1]}/{version}/")))
+    g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version}")))
 
     g.serialize(prepared_ontology_path, format="ttl")
-
 
 root = "/github/workspace"
 chdir(root)
@@ -79,7 +95,7 @@ for tag in tags:
 
     prepared_ontology_path = "prepared_ontology.ttl"
     rewrite_ontology_metadata(prepared_ontology_path, onto_name, repo, tag.name, prev_tag.name if prev_tag is not None else None)
-    create_docs(onto_name, prepared_ontology_path, out_path)
+    create_docs(onto_name, prepared_ontology_path, out_path, prev_tag)
 
 
     remove(prepared_ontology_path)

@@ -8,4 +8,4 @@ Sets and overrides:
 - vann:preferredNamespaceUri (from ontology entity IRI)
 - owl:priorVersion (from previous git tag)
 - owl:versionInfo (from git tag)
-- schema:citation (commonly abbreviated SDO apparently) ("Cite this vocabulary as: {dct:creator}, {dct:title} {from tag}"@en and "Zitieren Sie dieses Vokabular als: {dct:creator}, {dct:title} {from tag}"@de)
+- schema:citation (commonly abbreviated SDO apparently) ("{dct:creator}, {dct:title} {from tag}")
