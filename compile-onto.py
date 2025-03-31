@@ -9,7 +9,15 @@ from os import chdir, remove
 from rdflib import *
 from rdflib.namespace import OWL, VANN, DCTERMS, SDO
 
-def create_docs(onto_name : str, out_path : str, repo : Repo, curr_tag : str, last_tag : str):
+def create_docs(onto_name : str, ontology_path : str, out_path : str):
+    subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile {ontology_path} -import {ontology_path} -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
+
+    diagram_path = f"copy/ontology/{onto_name}_diagram.svg"
+    copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
+    if Path(diagram_path).is_file():
+        copyfile(diagram_path, f"{out_path}/{onto_name}_diagram.svg")
+
+def rewrite_ontology_metadata(prepared_ontology_path, onto_name, repo, curr_tag, last_tag):
     g = Graph()
     g.parse(f'copy/ontology/{onto_name}.ttl')
     default_namespace = next(n for n in g.namespaces() if n[0] == '')
@@ -47,14 +55,8 @@ def create_docs(onto_name : str, out_path : str, repo : Repo, curr_tag : str, la
     g.add((ontology_entity, SDO.citation, Literal(f"Cite this vocabulary as: {creator}, {title} v{version}", lang="en")))
     g.add((ontology_entity, SDO.citation, Literal(f"Zitieren sie dieses Vokabular als: {creator}, {title} v{version}", lang="de")))
 
-    g.serialize("prepared_ontology.ttl", format="ttl")
-    subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile prepared_ontology.ttl -import prepared_ontology.ttl -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
-    remove("prepared_ontology.ttl")
+    g.serialize(prepared_ontology_path, format="ttl")
 
-    diagram_path = f"copy/ontology/{onto_name}_diagram.svg"
-    copyfile("/usr/local/widoco/default_index.html", f"{out_path}/index.html")
-    if Path(diagram_path).is_file():
-        copyfile(diagram_path, f"{out_path}/{onto_name}_diagram.svg")
 
 root = "/github/workspace"
 chdir(root)
@@ -74,7 +76,15 @@ for tag in tags:
     onto_name = onto_files[0][:-4]
     
     out_path = f"out/{tag.name[1:]}"
-    create_docs(onto_name, out_path, repo, tag.name, prev_tag.name if prev_tag is not None else None)
+
+    prepared_ontology_path = "prepared_ontology.ttl"
+    rewrite_ontology_metadata(prepared_ontology_path, onto_name, repo, tag.name, prev_tag.name if prev_tag is not None else None)
+    create_docs(onto_name, prepared_ontology_path, out_path)
+
+
+    remove(prepared_ontology_path)
+
+
     if tag == tags[-1]:
         copytree(out_path, "out/", dirs_exist_ok=True)
     prev_tag = tag
