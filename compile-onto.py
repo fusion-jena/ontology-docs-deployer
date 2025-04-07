@@ -63,7 +63,10 @@ def create_docs(onto_name : str, ontology_path : str, out_path : str, last_tag :
     print(f"Calling Widoco now! with {onto_name}, {ontology_path}, {out_path}, {last_tag}", flush=True)
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile {ontology_path} -import {ontology_path} -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
     if last_tag is not None:
-        move_files(f'{out_path}/doc', out_path)
+        try:
+            move_files(f'{out_path}/doc', out_path)
+        except:
+            pass
 
 def copy_files_to_out(in_paths : List[str], out_path : str):
     for f in in_paths:
@@ -87,7 +90,17 @@ def get_lang_IRI_Table(ontology : Graph, lang : str):
         """) if x[1].language == lang]
     
     classes.sort(key= lambda c: c['IRI'])
+    if len(classes) == 0:
+        return ''
+    
     return markdown_table(classes).set_params(row_sep = 'markdown', quote = False).get_markdown()
+
+def get_data_from_prop(g: Graph, entity : URIRef, property: URIRef):
+    results = list(g.triples((entity, property, None)))
+    if len(results) > 0:
+        return str(results[0][2])
+    
+
 
 def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag : str, last_tag : str, cq_result_name : Optional[str]):
     g = ontology
@@ -97,9 +110,9 @@ def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag :
 
     commit_date = repo.head.commit.committed_datetime
     commit_date_str = f'{commit_date.year}-{commit_date.month}-{commit_date.day}'
-    print(list(g.triples((None, DCTERMS.creator, None))))
-    creator = str(next(g.triples((ontology_entity, DCTERMS.creator, None)))[2])
-    title = str(next(g.triples((ontology_entity, DCTERMS.title, None)))[2])
+    
+    creator = get_data_from_prop(g, ontology_entity, DCTERMS.creator) 
+    title = get_data_from_prop(g, ontology_entity, DCTERMS.title)
     
     version = curr_tag[1:]
     prev_version = last_tag[1:] if last_tag is not None else None
@@ -141,8 +154,9 @@ def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag :
     g.add((ontology_entity, OWL.versionInfo, Literal(version)))
 
     # Citation info (for some reason, widoco does not support langstrings here)
-    g.remove((ontology_entity, SDO.citation, None))
-    g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version}")))
+    if creator is not None and title is not None:
+        g.remove((ontology_entity, SDO.citation, None))
+        g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version}")))
 
     g.serialize(out_path, format="ttl")
 
