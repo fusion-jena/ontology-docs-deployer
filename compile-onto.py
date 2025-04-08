@@ -183,6 +183,7 @@ def get_ontology_entity(g : Graph):
 
 def generate_markdown_from_competency_questions(cqs, output_path, output_filename):
     output_md = "# Kompetenzfragen \n\n"
+    os.makedirs(output_path+'/cq_answers')
 
     for i, cq in enumerate(cqs, start=1):
         query = cq.query
@@ -243,7 +244,7 @@ for tag in tags:
     write_string_to_file('./de-iri-table.md', get_lang_IRI_Table(g, 'de'))
     
     is_cq_result_set = False
-    cq_path = 'copy/ontology/docs/competency_questions.yml'
+    cq_path = 'copy/docs/competency_questions.yml'
     cq_result_name = 'cq_results.md'
     try:
         cqs = create_competency_questions(read_yaml_file(cq_path))
