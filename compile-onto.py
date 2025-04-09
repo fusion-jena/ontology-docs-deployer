@@ -193,7 +193,7 @@ def generate_markdown_from_competency_questions(cqs, output_path, output_filenam
         try:
             result.serialize(f"{output_path}/cq_answers/{i}.csv", format='csv')
             output_format = 'csv'
-        except PluginException:
+        except Exception:
             result.serialize(f"{output_path}/cq_answers/{i}.xml", format='xml')
             output_format = 'xml'
 
@@ -252,8 +252,9 @@ for tag in tags:
         generate_markdown_from_competency_questions(cqs, out_path, cq_result_name)
         print("CQs queried")
         is_cq_result_set = True
-    except:
+    except Exception as e:
         print("CQs could not be read")
+        print(e, type(e))
     
     prepared_ontology_path = "prepared_ontology.ttl"
     rewrite_ontology_metadata(prepared_ontology_path, g, repo, tag.name, prev_tag.name if prev_tag is not None else None, cq_result_name if is_cq_result_set else None)
