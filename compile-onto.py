@@ -66,6 +66,7 @@ def create_docs(onto_name : str, ontology_path : str, out_path : str, last_tag :
     if last_tag is not None:
         try:
             move_files(f'{out_path}/doc', out_path)
+            logging.info(f"Moved files from {out_path}/doc to {out_path}")
         except Exception as e:
             logging.warning(f"Could not move files from doc: {e}")
 
