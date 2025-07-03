@@ -63,7 +63,7 @@ def move_files(source_dir : str, destination_dir : str):
 def create_docs(onto_name : str, ontology_path : str, out_path : str, last_tag : str):
     logging.info(f"Calling Widoco with onto_name={onto_name}, ontology_path={ontology_path}, out_path={out_path}, last_tag={last_tag}")
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile {ontology_path} -import {ontology_path} -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
-    if last_tag is not None:
+    if len(glob(f'{out_path}/doc/*')) > 0:
         try:
             move_files(f'{out_path}/doc', out_path)
             logging.info(f"Moved files from {out_path}/doc to {out_path}")
