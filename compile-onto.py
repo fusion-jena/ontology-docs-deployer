@@ -184,7 +184,7 @@ def get_ontology_entity(g : Graph):
     assert (namespace is not None)
     return namespace, ontology_entity
 
-def generate_markdown_from_competency_questions(cqs, output_path, output_filename):
+def generate_markdown_from_competency_questions(cqs, output_path, output_filename, example_graph):
     logging.info(f'Generating markdown from competency questions to {output_path}/{output_filename}')
     output_md = "# Kompetenzfragen \n\n"
     os.makedirs(output_path+'/cq_answers')
@@ -230,6 +230,27 @@ repo = Repo.init("./copy")
 tags = natsorted([t for t in repo.tags if t.name.startswith('v')], key= lambda t: t.name)
 
 prev_tag = None
+def handleCQs(create_competency_questions, read_yaml_file, generate_markdown_from_competency_questions, out_path, ontology_path, example_individuals_path, cq_path, cq_result_name):
+    example_graph = Graph()
+    
+    try:
+        logging.info(f'Parsing example individuals file: {example_individuals_path}')
+        example_graph.parse(ontology_path)
+        example_graph.parse(example_individuals_path)
+    except Exception as e:
+        logging.error(f"Error parsing example individuals or ontology file: {e}")
+        return False
+
+    try:
+        logging.info(f'Reading and processing competency questions from {cq_path}')
+        cqs = create_competency_questions(read_yaml_file(cq_path))
+        logging.info("CQs read successfully.")
+        generate_markdown_from_competency_questions(cqs, out_path, cq_result_name, example_graph)
+        logging.info("CQs queried and markdown generated.")
+        return True
+    except Exception as e:
+        logging.warning(f"CQs could not be read or processed: {e}")
+
 for tag in tags:
     logging.info(f'Checking out tag: {tag}')
     repo.git.checkout(tag)
@@ -246,26 +267,13 @@ for tag in tags:
     logging.info(f'Parsing ontology file: {ontology_path}')
     g.parse(ontology_path)
 
-    example_graph = Graph()
-    logging.info(f'Parsing example individuals file: {example_individuals_path}')
-    example_graph.parse(ontology_path)
-    example_graph.parse(example_individuals_path)
-
     write_string_to_file('./en-iri-table.md', get_lang_IRI_Table(g, 'en'))
     write_string_to_file('./de-iri-table.md', get_lang_IRI_Table(g, 'de'))
     
-    is_cq_result_set = False
     cq_path = 'copy/docs/competency_questions.yml'
     cq_result_name = 'cq_results.md'
-    try:
-        logging.info(f'Reading and processing competency questions from {cq_path}')
-        cqs = create_competency_questions(read_yaml_file(cq_path))
-        logging.info("CQs read successfully.")
-        generate_markdown_from_competency_questions(cqs, out_path, cq_result_name)
-        logging.info("CQs queried and markdown generated.")
-        is_cq_result_set = True
-    except Exception as e:
-        logging.warning(f"CQs could not be read or processed: {e}")
+
+    is_cq_result_set = handleCQs(create_competency_questions, read_yaml_file, generate_markdown_from_competency_questions, out_path, ontology_path, example_individuals_path, cq_path, cq_result_name)
     
     prepared_ontology_path = "prepared_ontology.ttl"
     rewrite_ontology_metadata(prepared_ontology_path, g, repo, tag.name, prev_tag.name if prev_tag is not None else None, cq_result_name if is_cq_result_set else None)
