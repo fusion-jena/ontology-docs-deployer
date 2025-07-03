@@ -15,6 +15,9 @@ from py_markdown_table.markdown_table import markdown_table
 import yaml
 from rdflib.plugin import PluginException
 import re
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class CompetencyQuestion:
     def __init__(self, plain, query):
@@ -25,59 +28,56 @@ class CompetencyQuestion:
         return f"CompetencyQuestion(plain='{self.plain}', query='{self.query}')"
 
 def create_competency_questions(questions):
+    logging.info('Creating competency questions from YAML.')
     return [CompetencyQuestion(q['plain'], q['query']) for q in questions['competency-questions']]
 
 
 def read_yaml_file(file_path):
+    logging.info(f'Reading YAML file: {file_path}')
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             data = yaml.safe_load(file)
+            logging.info('YAML file loaded successfully.')
             return data
     except FileNotFoundError:
-        print("File not found.")
+        logging.error(f"File not found: {file_path}")
         return None
     except yaml.YAMLError as e:
-        print("Error parsing YAML file: ", e)
+        logging.error(f"Error parsing YAML file: {e}")
         return None
 
 def write_string_to_file(file_path : str, content : str):
+    logging.info(f'Writing string to file: {file_path}')
     try:
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(content)
-        print(f"String written to {file_path} successfully.")
+        logging.info(f"String written to {file_path} successfully.")
     except Exception as e:
-        print(f"Error writing to {file_path}: {str(e)}")
+        logging.error(f"Error writing to {file_path}: {str(e)}")
 
 def move_files(source_dir : str, destination_dir : str):
-    """
-    Move all files and directories from the source directory to the destination directory.
-
-    Args:
-        source_dir (str): The path to the source directory.
-        destination_dir (str): The path to the destination directory.
-    """
+    logging.info(f'Moving files from {source_dir} to {destination_dir}')
     for item in os.listdir(source_dir):
         shutil.move(os.path.join(source_dir, item), destination_dir)
 
 def create_docs(onto_name : str, ontology_path : str, out_path : str, last_tag : str):
-    print(f"Calling Widoco now! with {onto_name}, {ontology_path}, {out_path}, {last_tag}", flush=True)
+    logging.info(f"Calling Widoco with onto_name={onto_name}, ontology_path={ontology_path}, out_path={out_path}, last_tag={last_tag}")
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile {ontology_path} -import {ontology_path} -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
     if last_tag is not None:
         try:
             move_files(f'{out_path}/doc', out_path)
-        except:
-            pass
+        except Exception as e:
+            logging.warning(f"Could not move files from doc: {e}")
 
 def copy_files_to_out(in_paths : List[str], out_path : str):
     for f in in_paths:
-        print(f"trying to move {f}")
+        logging.info(f"Trying to move {f} to {out_path}")
         if (Path(f).is_file()):
             shutil.copy(f, out_path)
-            print(f"Success!")
-
+            logging.info(f"Copied {f} to {out_path}")
 
 def get_lang_IRI_Table(ontology : Graph, lang : str):
-    
+    logging.info(f'Generating IRI table for language: {lang}')
     namespace, _ = get_ontology_entity(g)
     classes = [{'IRI': str(x[0]), 'Label': str(x[1])} for x in ontology.query(f"""
         SELECT ?s ?l
@@ -91,11 +91,13 @@ def get_lang_IRI_Table(ontology : Graph, lang : str):
     
     classes.sort(key= lambda c: c['IRI'])
     if len(classes) == 0:
+        logging.info('No classes found for IRI table.')
         return ''
     
     return markdown_table(classes).set_params(row_sep = 'markdown', quote = False).get_markdown()
 
 def get_data_from_prop(g: Graph, entity : URIRef, property: URIRef):
+    logging.info(f'Getting data from property: {property}')
     results = list(g.triples((entity, property, None)))
     if len(results) > 0:
         return str(results[0][2])
@@ -103,6 +105,7 @@ def get_data_from_prop(g: Graph, entity : URIRef, property: URIRef):
 
 
 def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag : str, last_tag : str, cq_result_name : Optional[str]):
+    logging.info(f'Rewriting ontology metadata for tag: {curr_tag}, previous tag: {last_tag}')
     g = ontology
     namespace, ontology_entity = get_ontology_entity(g)
     
@@ -159,9 +162,10 @@ def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag :
         g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version}")))
 
     g.serialize(out_path, format="ttl")
+    logging.info(f'Ontology metadata written to {out_path}')
 
 def get_ontology_entity(g : Graph):
-
+    logging.info('Getting ontology entity and namespace.')
     onto_entity = None
 
     for r in g.query("SELECT ?o WHERE { ?o a <http://www.w3.org/2002/07/owl#Ontology> }"):
@@ -178,10 +182,10 @@ def get_ontology_entity(g : Graph):
         break
 
     assert (namespace is not None)
-    
     return namespace, ontology_entity
 
 def generate_markdown_from_competency_questions(cqs, output_path, output_filename):
+    logging.info(f'Generating markdown from competency questions to {output_path}/{output_filename}')
     output_md = "# Kompetenzfragen \n\n"
     os.makedirs(output_path+'/cq_answers')
 
@@ -208,35 +212,42 @@ def generate_markdown_from_competency_questions(cqs, output_path, output_filenam
 '''
 
     write_string_to_file(f'{output_path}/{output_filename}', output_md)
+    logging.info(f'Markdown for competency questions written to {output_path}/{output_filename}')
 
 
+logging.info('Changing working directory to /github/workspace')
 root = "/github/workspace"
 chdir(root)
 
+logging.info('Removing ./out and ./copy directories if they exist.')
 rmtree("./out", ignore_errors=True)
 rmtree("./copy", ignore_errors=True)
+logging.info('Copying workspace to ./copy')
 copytree(root, "./copy")
 
+logging.info('Initializing git repo in ./copy')
 repo = Repo.init("./copy")
 tags = natsorted([t for t in repo.tags if t.name.startswith('v')], key= lambda t: t.name)
 
 prev_tag = None
 for tag in tags:
+    logging.info(f'Checking out tag: {tag}')
     repo.git.checkout(tag)
 
     onto_files = [basename(f) for f in glob('copy/ontology/*.ttl')]
     onto_files.sort(key=len)
     onto_name = onto_files[0][:-4]
-    
+    logging.info(f'Processing ontology: {onto_name}')
     out_path = f"out/{tag.name[1:]}"
-    
     ontology_path = f'copy/ontology/{onto_name}.ttl'
     example_individuals_path = f'copy/ontology/{onto_name}_individuals.ttl'
 
     g = Graph()
+    logging.info(f'Parsing ontology file: {ontology_path}')
     g.parse(ontology_path)
 
     example_graph = Graph()
+    logging.info(f'Parsing example individuals file: {example_individuals_path}')
     example_graph.parse(ontology_path)
     example_graph.parse(example_individuals_path)
 
@@ -247,14 +258,14 @@ for tag in tags:
     cq_path = 'copy/docs/competency_questions.yml'
     cq_result_name = 'cq_results.md'
     try:
+        logging.info(f'Reading and processing competency questions from {cq_path}')
         cqs = create_competency_questions(read_yaml_file(cq_path))
-        print("CQs read")
+        logging.info("CQs read successfully.")
         generate_markdown_from_competency_questions(cqs, out_path, cq_result_name)
-        print("CQs queried")
+        logging.info("CQs queried and markdown generated.")
         is_cq_result_set = True
     except Exception as e:
-        print("CQs could not be read")
-        print(e, type(e))
+        logging.warning(f"CQs could not be read or processed: {e}")
     
     prepared_ontology_path = "prepared_ontology.ttl"
     rewrite_ontology_metadata(prepared_ontology_path, g, repo, tag.name, prev_tag.name if prev_tag is not None else None, cq_result_name if is_cq_result_set else None)
@@ -262,8 +273,10 @@ for tag in tags:
     copy_files_to_out([f"copy/ontology/{onto_name}_diagram.svg", "/usr/local/widoco/index.html", './en-iri-table.md', './de-iri-table.md'], out_path)
 
     remove(prepared_ontology_path)
-
+    logging.info(f'Cleaned up prepared ontology file: {prepared_ontology_path}')
 
     if tag == tags[-1]:
+        logging.info(f'Copying {out_path} to out/')
         copytree(out_path, "out/", dirs_exist_ok=True)
     prev_tag = tag
+logging.info('Script finished.')
