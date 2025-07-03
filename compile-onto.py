@@ -172,7 +172,7 @@ def get_ontology_entity(g : Graph):
         ontology_entity = r[0]
         break
 
-    assert(ontology_entity is not None)
+    assert (ontology_entity is not None)
 
     namespace = None
 
@@ -180,6 +180,10 @@ def get_ontology_entity(g : Graph):
         class_uri = str(r[0])
         namespace = re.search(".*[#\/]", class_uri).group(0)
         break
+
+    if namespace is None:
+        logging.error("Could not determine namespace from ontology entity.")
+        namespace = str(ontology_entity).rsplit('/', 1)[0] + '/'
 
     assert (namespace is not None)
     return namespace, ontology_entity
