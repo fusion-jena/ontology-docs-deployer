@@ -60,8 +60,8 @@ def move_files(source_dir : str, destination_dir : str):
     for item in os.listdir(source_dir):
         shutil.move(os.path.join(source_dir, item), destination_dir)
 
-def create_docs(onto_name : str, ontology_path : str, out_path : str, last_tag : str):
-    logging.info(f"Calling Widoco with onto_name={onto_name}, ontology_path={ontology_path}, out_path={out_path}, last_tag={last_tag}")
+def create_docs(onto_name : str, ontology_path : str, out_path : str):
+    logging.info(f"Calling Widoco with onto_name={onto_name}, ontology_path={ontology_path}, out_path={out_path}")
     subprocess.run(f"java -jar /usr/local/widoco/widoco.jar -ontFile {ontology_path} -import {ontology_path} -outFolder {out_path} -rewriteAll -getOntologyMetadata -lang de-en -saveConfig out/config -webVowl -noPlaceHolderText -uniteSections", shell=True)
     if len(glob(f'{out_path}/doc/*')) > 0:
         try:
@@ -105,8 +105,8 @@ def get_data_from_prop(g: Graph, entity : URIRef, property: URIRef):
     
 
 
-def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag : str, last_tag : str, cq_result_name : Optional[str]):
-    logging.info(f'Rewriting ontology metadata for tag: {curr_tag}, previous tag: {last_tag}')
+def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, version_major_minor : str, prev_version_major_minor : str, cq_result_name : Optional[str]):
+    logging.info(f'Rewriting ontology metadata for version: {version_major_minor}, previous version: {prev_version_major_minor}')
     g = ontology
     namespace, ontology_entity = get_ontology_entity(g)
     
@@ -117,10 +117,6 @@ def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag :
     
     creator = get_data_from_prop(g, ontology_entity, DCTERMS.creator) 
     title = get_data_from_prop(g, ontology_entity, DCTERMS.title)
-    
-    version = curr_tag[1:]
-    prev_version = last_tag[1:] if last_tag is not None else None
-    
 
     # Modified Date
     g.remove((ontology_entity, DCTERMS.modified, None))
@@ -128,7 +124,7 @@ def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag :
 
     # Versioned IRI
     g.remove((ontology_entity, OWL.versionIRI, None))
-    g.add((ontology_entity, OWL.versionIRI, URIRef(f"{namespace[:-1]}/{version}/")))
+    g.add((ontology_entity, OWL.versionIRI, URIRef(f"{namespace[:-1]}/{version_major_minor}/")))
 
     # Namespace Prefix (ontology abbreviation)
     g.remove((ontology_entity, VANN.preferredNamespacePrefix, None))
@@ -150,25 +146,24 @@ def rewrite_ontology_metadata(out_path : str, ontology : Graph, repo, curr_tag :
 
     # Prior Version (IRI to previous ontology version)
     g.remove((ontology_entity, OWL.priorVersion, None))
-    if prev_version is not None:
-        g.add((ontology_entity, OWL.priorVersion, URIRef(f"{namespace[:-1]}/{prev_version}/")))
+    if prev_version_major_minor is not None:
+        g.add((ontology_entity, OWL.priorVersion, URIRef(f"{namespace[:-1]}/{prev_version_major_minor}/")))
     
     # Version Info (eg '1.0')
     g.remove((ontology_entity, OWL.versionInfo, None))
-    g.add((ontology_entity, OWL.versionInfo, Literal(version)))
+    g.add((ontology_entity, OWL.versionInfo, Literal(version_major_minor)))
 
     # Citation info (for some reason, widoco does not support langstrings here)
     if creator is not None and title is not None:
         g.remove((ontology_entity, SDO.citation, None))
-        g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version}")))
+        g.add((ontology_entity, SDO.citation, Literal(f"{creator}, {title} v{version_major_minor}")))
 
     g.serialize(out_path, format="ttl")
     logging.info(f'Ontology metadata written to {out_path}')
 
 def get_ontology_entity(g : Graph):
     logging.info('Getting ontology entity and namespace.')
-    onto_entity = None
-
+    
     for r in g.query("SELECT ?o WHERE { ?o a <http://www.w3.org/2002/07/owl#Ontology> }"):
         ontology_entity = r[0]
         break
@@ -224,12 +219,13 @@ def dropPatchedVersions(sorted_tags):
     tag_by_name = dict()
 
     for t in sorted_tags:
-        prev_tag_with_same_minor = tag_by_name.get(f'v{t.name.split(".")[0]}.{t.name.split(".")[1]}')
+        cleaned_tag_name = f'{t.name.split(".")[0][1:]}.{t.name.split(".")[1]}'
+        prev_tag_with_same_minor = tag_by_name.get(cleaned_tag_name, None)
         if (prev_tag_with_same_minor is not None):
             logging.info(f'Dropping patched version tag: {prev_tag_with_same_minor.name} in favor of {t.name}')
             new_tags.remove(prev_tag_with_same_minor)
 
-        tag_by_name[t.name] = t
+        tag_by_name[cleaned_tag_name] = t
         new_tags.append(t)
     
     return new_tags
@@ -250,7 +246,7 @@ tags = natsorted([t for t in repo.tags if t.name.startswith('v')], key= lambda t
 tags = dropPatchedVersions(tags)
 
 
-prev_tag = None
+prev_version_major_minor = None
 def handleCQs(create_competency_questions, read_yaml_file, generate_markdown_from_competency_questions, out_path, ontology_path, example_individuals_path, cq_path, cq_result_name):
     example_graph = Graph()
     
@@ -274,13 +270,14 @@ def handleCQs(create_competency_questions, read_yaml_file, generate_markdown_fro
 
 for tag in tags:
     logging.info(f'Checking out tag: {tag}')
+    version_major_minor = f'{tag.name.split(".")[0][1:]}.{tag.name.split(".")[1]}'
     repo.git.checkout(tag)
 
     onto_files = [basename(f) for f in glob('copy/ontology/*.ttl')]
     onto_files.sort(key=len)
     onto_name = onto_files[0][:-4]
     logging.info(f'Processing ontology: {onto_name}')
-    out_path = f"out/{tag.name[1:]}"
+    out_path = f"out/{version_major_minor}"
     ontology_path = f'copy/ontology/{onto_name}.ttl'
     example_individuals_path = f'copy/ontology/{onto_name}_individuals.ttl'
 
@@ -297,8 +294,8 @@ for tag in tags:
     is_cq_result_set = handleCQs(create_competency_questions, read_yaml_file, generate_markdown_from_competency_questions, out_path, ontology_path, example_individuals_path, cq_path, cq_result_name)
     
     prepared_ontology_path = "prepared_ontology.ttl"
-    rewrite_ontology_metadata(prepared_ontology_path, g, repo, tag.name, prev_tag.name if prev_tag is not None else None, cq_result_name if is_cq_result_set else None)
-    create_docs(onto_name, prepared_ontology_path, out_path, prev_tag)
+    rewrite_ontology_metadata(prepared_ontology_path, g, repo, version_major_minor, prev_version_major_minor, cq_result_name if is_cq_result_set else None)
+    create_docs(onto_name, prepared_ontology_path, out_path)
     copy_files_to_out([f"copy/ontology/{onto_name}_diagram.svg", "/usr/local/widoco/index.html", './en-iri-table.md', './de-iri-table.md'], out_path)
 
     remove(prepared_ontology_path)
@@ -307,5 +304,5 @@ for tag in tags:
     if tag == tags[-1]:
         logging.info(f'Copying {out_path} to out/')
         copytree(out_path, "out/", dirs_exist_ok=True)
-    prev_tag = tag
+    prev_version_major_minor = version_major_minor
 logging.info('Script finished.')
