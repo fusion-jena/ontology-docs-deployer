@@ -5,6 +5,7 @@ Automated documentation generator for OWL ontologies using [Widoco](https://gith
 ## Features
 
 - **Version Management**: Automatically processes all git tags (v*) and generates documentation for each version
+  - Patch versions are automatically dropped (e.g., if both v1.0.0 and v1.0.1 exist, only v1.0.1 is documented)
 - **Metadata Enrichment**: Injects version info, modification dates, namespace details, and citation metadata into ontologies
 - **IRI Tables**: Generates bilingual (DE/EN) markdown tables of all classes and properties
 - **Competency Questions**: Executes SPARQL queries against example data and documents results

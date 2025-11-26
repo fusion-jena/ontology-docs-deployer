@@ -219,6 +219,20 @@ def generate_markdown_from_competency_questions(cqs, output_path, output_filenam
     write_string_to_file(f'{output_path}/{output_filename}', output_md)
     logging.info(f'Markdown for competency questions written to {output_path}/{output_filename}')
 
+def dropPatchedVersions(sorted_tags):
+    new_tags = []
+    tag_by_name = dict()
+
+    for t in sorted_tags:
+        prev_tag_with_same_minor = tag_by_name.get(f'v{t.name.split(".")[0]}.{t.name.split(".")[1]}')
+        if (prev_tag_with_same_minor is not None):
+            logging.info(f'Dropping patched version tag: {prev_tag_with_same_minor.name} in favor of {t.name}')
+            new_tags.remove(prev_tag_with_same_minor)
+
+        tag_by_name[t.name] = t
+        new_tags.append(t)
+    
+    return new_tags
 
 logging.info('Changing working directory to /github/workspace')
 root = "/github/workspace"
@@ -233,6 +247,8 @@ copytree(root, "./copy")
 logging.info('Initializing git repo in ./copy')
 repo = Repo.init("./copy")
 tags = natsorted([t for t in repo.tags if t.name.startswith('v')], key= lambda t: t.name)
+tags = dropPatchedVersions(tags)
+
 
 prev_tag = None
 def handleCQs(create_competency_questions, read_yaml_file, generate_markdown_from_competency_questions, out_path, ontology_path, example_individuals_path, cq_path, cq_result_name):
