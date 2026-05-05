@@ -15,6 +15,7 @@ from py_markdown_table.markdown_table import markdown_table
 import yaml
 from rdflib.plugin import PluginException
 import re
+import json
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -214,6 +215,50 @@ def generate_markdown_from_competency_questions(cqs, output_path, output_filenam
     write_string_to_file(f'{output_path}/{output_filename}', output_md)
     logging.info(f'Markdown for competency questions written to {output_path}/{output_filename}')
 
+def patch_webvowl_external(out_path: str):
+    json_path = f"{out_path}/webvowl/data/ontology.json"
+    if not Path(json_path).exists():
+        logging.warning(f"WebVOWL JSON not found at {json_path}, skipping external patch.")
+        return
+
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    ns_entries = data.get("header", {}).get("other", {}).get("preferredNamespaceUri", [])
+    if ns_entries:
+        ontology_namespace = ns_entries[0]["value"]
+    else:
+        iri = data.get("header", {}).get("iri", "")
+        m = re.search(r".*[#/]", iri)
+        ontology_namespace = m.group(0) if m else None
+
+    if not ontology_namespace:
+        logging.error("Could not determine ontology namespace for WebVOWL external patch.")
+        return
+
+    logging.info(f"Patching WebVOWL external attributes using namespace: {ontology_namespace}")
+    changed = 0
+    for entry in data.get("classAttribute", []):
+        iri = entry.get("iri", "")
+        attrs = entry.get("attributes", [])
+        is_own = iri.startswith(ontology_namespace)
+        has_external = "external" in attrs
+
+        if is_own and has_external:
+            attrs.remove("external")
+            entry["attributes"] = attrs
+            changed += 1
+        elif not is_own and not has_external:
+            attrs.append("external")
+            entry["attributes"] = attrs
+            changed += 1
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    logging.info(f"WebVOWL external patch: corrected {changed} classAttribute entries in {json_path}")
+
+
 def dropPatchedVersions(sorted_tags):
     new_tags = []
     tag_by_name = dict()
@@ -296,6 +341,7 @@ for tag in tags:
     prepared_ontology_path = "prepared_ontology.ttl"
     rewrite_ontology_metadata(prepared_ontology_path, g, repo, version_major_minor, prev_version_major_minor, cq_result_name if is_cq_result_set else None)
     create_docs(onto_name, prepared_ontology_path, out_path)
+    patch_webvowl_external(out_path)
     copy_files_to_out([f"copy/ontology/{onto_name}_diagram.svg", "/usr/local/widoco/index.html", './en-iri-table.md', './de-iri-table.md'], out_path)
 
     remove(prepared_ontology_path)
