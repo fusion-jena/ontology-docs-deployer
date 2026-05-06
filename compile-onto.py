@@ -238,25 +238,26 @@ def patch_webvowl_external(out_path: str):
 
     logging.info(f"Patching WebVOWL external attributes using namespace: {ontology_namespace}")
     changed = 0
-    for entry in data.get("classAttribute", []):
-        iri = entry.get("iri", "")
-        attrs = entry.get("attributes", [])
-        is_own = iri.startswith(ontology_namespace)
-        has_external = "external" in attrs
+    for section in ("classAttribute", "propertyAttribute"):
+        for entry in data.get(section, []):
+            iri = entry.get("iri", "")
+            attrs = entry.get("attributes", [])
+            is_own = iri.startswith(ontology_namespace)
+            has_external = "external" in attrs
 
-        if is_own and has_external:
-            attrs.remove("external")
-            entry["attributes"] = attrs
-            changed += 1
-        elif not is_own and not has_external:
-            attrs.append("external")
-            entry["attributes"] = attrs
-            changed += 1
+            if is_own and has_external:
+                attrs.remove("external")
+                entry["attributes"] = attrs
+                changed += 1
+            elif not is_own and not has_external:
+                attrs.append("external")
+                entry["attributes"] = attrs
+                changed += 1
 
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    logging.info(f"WebVOWL external patch: corrected {changed} classAttribute entries in {json_path}")
+    logging.info(f"WebVOWL external patch: corrected {changed} entries in {json_path}")
 
 
 def dropPatchedVersions(sorted_tags):
